@@ -50,6 +50,8 @@ var OES_vertex_array_object;
 var old_OES_vertex_array_object;
 var vertexArrayObject;
 var OES_texture_float;
+var OES_standard_derivatives;
+var EXT_shader_lod;
 var newExtension;
 
 function init()
@@ -76,6 +78,10 @@ function setupTest()
     // Try to get a few extensions
     OES_vertex_array_object = getExtensionAndAddProperty(gl, "OES_vertex_array_object");
     OES_texture_float = getExtensionAndAddProperty(gl, "OES_texture_float");
+
+    // Shader extensions
+    OES_standard_derivatives = getExtensionAndAddProperty(gl, "OES_standard_derivatives");
+    EXT_shader_lod = getExtensionAndAddProperty(gl, "EXT_shader_lod");
 
     return true;
 }
@@ -268,9 +274,75 @@ function testOESVertexArrayObject() {
   }
 }
 
+function testCompileOESStandardDerivatives() {
+  var shaders = [
+    `
+      attribute vec4 pos;
+      void main() {
+        gl_Position = pos;
+      }
+    `,
+    `
+      #extension GL_OES_standard_derivatives : enable
+      void main() {
+        gl_FragColor = vec4(dFdx(gl_FragCoord.x));
+      }
+    `
+  ];
+
+  var program = WebGLTestUtils.setupProgram(gl, shaders); 
+  return program !== null;
+}
+
+function testOESStandardDerivatives() {
+  if (OES_standard_derivatives) {
+    // Extension must still be lost.
+    shouldBeFalse("testCompileOESStandardDerivatives()");
+    // Try re-enabling extension
+    OES_standard_derivatives = reGetExtensionAndTestForProperty(gl, "OES_standard_derivatives", false);
+    shouldBeTrue("testCompileOESStandardDerivatives()");
+  }
+}
+
+function testCompileExtShaderLod() {
+  var shaders = [
+    `
+      attribute vec4 pos;
+      void main() {
+        gl_Position = pos;
+      }
+    `,
+    `
+      #extension GL_EXT_shader_texture_lod : enable
+      uniform sampler2D tex;
+      void main() {
+        gl_FragColor = texture2DLod(tex, gl_FragCoord.xy, 0.0);
+      }
+    `
+  ];
+
+  var program = WebGLTestUtils.setupProgram(gl, shaders); 
+  return program !== null;
+}
+
+function testExtShaderLod() {
+  if (EXT_shader_lod) {
+    // Extension must still be lost.
+    shouldBeFalse("testCompileExtShaderLod()");
+    // Try re-enabling extension
+    EXT_shader_lod = reGetExtensionAndTestForProperty(gl, "EXT_shader_lod", false);
+    shouldBeTrue("testCompileExtShaderLod()");
+  }
+}
+    
 function testExtensions() {
   testOESTextureFloat();
   testOESVertexArrayObject();
+    
+  // test shader extensions, must compile and link program
+  testOESStandardDerivatives();
+  testExtShaderLod();
+    
   // Only the WEBGL_lose_context extension should be the same object after context lost.
   new_WEBGL_lose_context = reGetExtensionAndTestForProperty(gl, "WEBGL_lose_context", true);
 }
